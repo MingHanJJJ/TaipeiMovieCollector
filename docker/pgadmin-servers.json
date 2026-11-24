@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "TaipeiMovieCollector (local)",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "taipei_movies",
+      "Username": "han-hs",
+      "SSLMode": "prefer"
+    }
+  }
+}
