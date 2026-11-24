@@ -1,0 +1,5 @@
+{
+  "_comment": "Manual TMDB matches that beat the automatic title matching. Key = movies.title_zh, value = TMDB movie id (null = never match / no poster).",
+  "華倫夫人的職業 (英國國家劇院現場)": 1507563,
+  "同級生：十週年重映": 372754
+}

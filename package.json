@@ -13,7 +13,9 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:psql": "docker compose exec postgres sh -c 'psql -U $POSTGRES_USER -d $POSTGRES_DB'",
-    "seed": "tsx scripts/seed/cinemas.mts"
+    "seed": "tsx scripts/seed/cinemas.mts",
+    "sync:vieshow": "tsx scripts/providers/vieshow/sync.mts",
+    "enrich:tmdb": "tsx scripts/enrich/tmdb.mts"
   },
   "dependencies": {
     "cheerio": "^1.2.0",

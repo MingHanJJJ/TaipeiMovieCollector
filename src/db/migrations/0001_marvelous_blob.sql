@@ -1,0 +1,1 @@
+ALTER TABLE "screenings" DROP COLUMN "sold_out";

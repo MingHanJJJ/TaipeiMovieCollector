@@ -1,6 +1,6 @@
 import { relations } from "drizzle-orm";
 import {
-  boolean, index, integer, numeric, pgTable, serial, smallint, text, timestamp, unique, uniqueIndex,
+  index, integer, numeric, pgTable, serial, smallint, text, timestamp, unique, uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 /** A physical cinema. `provider` + `code` is the natural key, e.g. ('vieshow','TP'). */
@@ -30,11 +30,14 @@ export const movies = pgTable("movies", {
   imdbVotes: integer("imdb_votes"),
   rtCriticsPct: smallint("rt_critics_pct"), // 0–100; null = unknown (OMDb returns N/A sometimes)
   ratingsFetchedAt: timestamp("ratings_fetched_at", { withTimezone: true }),
+  /** last time we tried to match this film on TMDB (even if nothing matched), to avoid re-querying daily */
+  tmdbCheckedAt: timestamp("tmdb_checked_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   uniqueIndex("movies_title_zh_uq").on(t.titleZh),
-  uniqueIndex("movies_tmdb_id_uq").on(t.tmdbId),
-  uniqueIndex("movies_imdb_id_uq").on(t.imdbId),
+  // not unique: Vieshow can list one film under several titles (e.g. "樂園追放" / "樂園追放 心之共鳴")
+  index("movies_tmdb_id_idx").on(t.tmdbId),
+  index("movies_imdb_id_idx").on(t.imdbId),
 ]);
 
 export const screenings = pgTable("screenings", {
@@ -47,7 +50,6 @@ export const screenings = pgTable("screenings", {
   endsAt: timestamp("ends_at", { withTimezone: true }),
   format: text("format").notNull().default(""), // 'IMAX 3D' / '4DX' / '數位'
   language: text("language"), // '英' / '國'
-  soldOut: boolean("sold_out").notNull().default(false),
   /** last sync that still saw this screening; older rows are treated as withdrawn */
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

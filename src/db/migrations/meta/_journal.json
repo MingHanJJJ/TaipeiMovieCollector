@@ -8,6 +8,27 @@
       "when": 1795495422177,
       "tag": "0000_freezing_tinkerer",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795496247918,
+      "tag": "0001_marvelous_blob",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795499619900,
+      "tag": "0002_dapper_wolverine",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795499996133,
+      "tag": "0003_loud_union_jack",
+      "breakpoints": true
     }
   ]
 }

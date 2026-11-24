@@ -24,9 +24,10 @@ npm run dev                     # http://localhost:3000
 | `npm run typecheck` / `npm run lint` | 型別檢查 / ESLint |
 | `npm run db:generate` | 依 `src/db/schema.ts` 產生 migration |
 | `npm run db:migrate` | 套用 migration |
+| `npm run sync:vieshow -- --all` | 同步全部威秀影城場次(約 25 分鐘;每週三晚上跑) |
 | `npm run db:psql` | 進入 Postgres 的 psql |
 | `npm run db:studio` | Drizzle Studio |
 | `docker compose down -v` | 停止並**清空**資料庫 |
 
 ## 爬蟲守則
-只讀公開頁面、低頻、有快取;所有威秀請求都經過熔斷器(任一次 403/429/`Access Denied`/`/hold/` → 停止 24 小時),不偽造指紋、不換 IP、不用代理。狀態檔在 `.state/`。
+只讀公開頁面、低頻(頁面間隔 2–5 秒隨機)、影城每週更新一次場次所以**每週同步即可**(`npm run sync:vieshow -- --cinema TP`)。遇到封鎖(403/429/`Access Denied`/`/hold/`)直接中止並記錄,不重試、不偽造指紋、不換 IP、不用代理。

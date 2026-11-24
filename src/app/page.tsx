@@ -1,69 +1,115 @@
-import Image from "next/image";
+import { Suspense } from "react";
+import { connection } from "next/server";
+import { FilterBar } from "@/components/FilterBar";
+import { MovieCard } from "@/components/MovieCard";
+import { KIND_CLASS, KIND_LABEL } from "@/components/TimelineMatrix";
+import { getDayScreenings, lastSyncAt, listAvailableDates, listCinemas } from "@/lib/screenings";
+import { axisFor, groupByMovie, isIsoDate, minutesOfDay, shortCinemaName, taipeiToday, type FormatKind } from "@/lib/timeline";
 
-export default function Home() {
+type SP = Record<string, string | string[] | undefined>;
+const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+
+export default function Home({ searchParams }: { searchParams: Promise<SP> }) {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-16">
+      <header className="py-5">
+        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">台北電影場次比對</h1>
+        <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">勾選影城,在同一條時間軸上比較場次。點場次可前往威秀訂票頁。</p>
+      </header>
+      <Suspense fallback={<Skeleton />}>
+        <Results searchParams={searchParams} />
+      </Suspense>
+    </main>
+  );
+}
+
+function Skeleton() {
+  return (
+    <div className="animate-pulse" aria-busy="true" aria-label="載入中">
+      <div className="h-36 rounded-xl bg-neutral-200 dark:bg-neutral-800" />
+      <div className="mt-4 h-60 rounded-xl bg-neutral-200 dark:bg-neutral-800" />
+    </div>
+  );
+}
+
+async function Results({ searchParams }: { searchParams: Promise<SP> }) {
+  await connection(); // request-time: depends on "now" and live DB data
+  const sp = await searchParams;
+  const [cinemas, dates, synced] = await Promise.all([listCinemas(), listAvailableDates(), lastSyncAt()]);
+  const today = taipeiToday();
+
+  const dateParam = one(sp.date);
+  const date = isIsoDate(dateParam) ? dateParam : dates.includes(today) ? today : (dates[0] ?? today);
+  const dateOptions = dates.includes(date) ? dates : [date, ...dates].sort();
+
+  const allCodes = cinemas.map((c) => c.code);
+  const cParam = one(sp.c);
+  const hasCinemaParam = cParam !== undefined;
+  const selected = cParam === undefined ? allCodes : cParam.split(",").filter((c) => allCodes.includes(c));
+  const q = (one(sp.q) ?? "").trim();
+
+  const rows = await getDayScreenings(date, selected);
+  const needle = q.toLowerCase();
+  const filtered = needle ? rows.filter((r) => r.titleZh.toLowerCase().includes(needle) || (r.titleEn ?? "").toLowerCase().includes(needle)) : rows;
+  const groups = groupByMovie(filtered, date, allCodes);
+  const axis = axisFor(groups);
+  const nowMin = date === today ? minutesOfDay(new Date(), date) : null;
+  const sessions = groups.reduce((n, g) => n + g.sessionCount, 0);
+
+  return (
+    <>
+      <FilterBar
+        cinemas={cinemas.map((c) => ({ code: c.code, short: shortCinemaName(c.name) }))}
+        selected={selected}
+        hasCinemaParam={hasCinemaParam}
+        date={date}
+        dates={dateOptions}
+        today={today}
+        q={q}
+      />
+
+      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-500 dark:text-neutral-400">
+        <span>
+          {groups.length} 部電影 · {sessions} 場次 · {selected.length} 間影城
+        </span>
+        <span className="flex flex-wrap items-center gap-2" aria-label="圖例">
+          {(Object.keys(KIND_LABEL) as FormatKind[]).map((k) => (
+            <span key={k} className="flex items-center gap-1">
+              <span className={`inline-block h-3 w-3 rounded-sm ring-1 ring-inset ${KIND_CLASS[k]}`} />
+              {KIND_LABEL[k]}
+            </span>
+          ))}
+          {nowMin !== null && (
+            <span className="flex items-center gap-1">
+              <span className="inline-block h-3 border-l-2 border-rose-500/70" />
+              現在
+            </span>
+          )}
+        </span>
+      </div>
+
+      <div className="mt-3 flex flex-col gap-3">
+        {selected.length === 0 ? (
+          <EmptyState title="請至少勾選一間影城" hint="使用上方的影城按鈕,或按「全選」。" />
+        ) : groups.length === 0 ? (
+          <EmptyState title="這一天沒有符合的場次" hint={q ? "試試清除片名搜尋,或換一天、多勾幾間影城。" : "換一天,或多勾幾間影城。"} />
+        ) : (
+          groups.map((g) => <MovieCard key={g.movieId} group={g} axis={axis} nowMin={nowMin} />)
+        )}
+      </div>
+
+      <footer className="mt-8 text-xs text-neutral-500 dark:text-neutral-400">
+        場次資料來源:威秀影城官網{synced ? `,最後同步 ${synced.toLocaleString("zh-TW", { timeZone: "Asia/Taipei", hour12: false })}` : ""}。影城通常每週更新一次場次。海報與電影資料:TMDB(This product uses the TMDB API but is not endorsed or certified by TMDB.)
+      </footer>
+    </>
+  );
+}
+
+function EmptyState({ title, hint }: { title: string; hint: string }) {
+  return (
+    <div className="rounded-xl border border-dashed border-neutral-300 p-10 text-center dark:border-neutral-700">
+      <p className="font-medium">{title}</p>
+      <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">{hint}</p>
     </div>
   );
 }
