@@ -1,0 +1,71 @@
+<div
+  class="z-30 -mx-4 border-b border-black/10 bg-white/90 px-4 py-3 backdrop-blur sm:sticky sm:top-0 sm:mx-0 sm:rounded-xl sm:border dark:border-white/10 dark:bg-neutral-900/90"
+  [class.opacity-70]="loading()"
+>
+  <!-- dates -->
+  <div class="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="日期">
+    @for (d of dates(); track d.value) {
+      <a
+        [routerLink]="[]"
+        [queryParams]="queryFor(d.value)"
+        role="tab"
+        [attr.aria-selected]="d.value === data().date"
+        class="shrink-0 rounded-lg px-3 py-1.5 text-center text-sm leading-tight transition-colors"
+        [class]="
+          d.value === data().date
+            ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
+            : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700'
+        "
+      >
+        <span class="block font-medium tabular-nums">{{ d.monthDay }}</span>
+        <span class="block text-[11px] opacity-70">{{ d.label }}</span>
+      </a>
+    }
+  </div>
+
+  <!-- cinemas -->
+  <fieldset class="mt-2 flex flex-wrap items-center gap-1.5">
+    <legend class="sr-only">顯示影城</legend>
+    @for (cinema of data().cinemas; track cinema.code) {
+      <label
+        class="cursor-pointer rounded-full border border-neutral-300 px-3 py-1 text-xs transition-colors select-none has-[:checked]:border-sky-600 has-[:checked]:bg-sky-600 has-[:checked]:text-white has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-sky-500 dark:border-neutral-600"
+      >
+        <input
+          type="checkbox"
+          class="sr-only"
+          [checked]="selected().includes(cinema.code)"
+          (change)="toggle(cinema.code)"
+        />
+        {{ cinema.short }}
+      </label>
+    }
+    <span class="mx-1 h-4 w-px bg-neutral-300 dark:bg-neutral-600" aria-hidden="true"></span>
+    <button
+      type="button"
+      (click)="selectAll()"
+      class="text-xs text-sky-700 hover:underline dark:text-sky-400"
+    >
+      全選
+    </button>
+    <button
+      type="button"
+      (click)="selectNone()"
+      class="text-xs text-sky-700 hover:underline dark:text-sky-400"
+    >
+      清除
+    </button>
+  </fieldset>
+
+  <!-- search -->
+  <div class="mt-2">
+    <input
+      #search
+      type="search"
+      [value]="query()"
+      (input)="onQuery(search.value)"
+      placeholder="搜尋片名…"
+      aria-label="搜尋片名"
+      class="w-full rounded-lg border border-neutral-300 bg-transparent px-3 py-1.5 text-sm outline-none placeholder:text-neutral-400 focus:border-sky-500 sm:max-w-xs dark:border-neutral-600"
+    />
+  </div>
+</div>

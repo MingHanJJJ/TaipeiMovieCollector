@@ -1,0 +1,26 @@
+<article
+  class="rounded-xl border border-black/10 bg-white p-3 shadow-sm sm:p-4 dark:border-white/10 dark:bg-neutral-900"
+>
+  <header class="mb-3 flex gap-3">
+    <app-poster
+      [url]="group().posterUrl"
+      [title]="group().titleZh"
+      class="w-[4.5rem] shrink-0 sm:w-[5.25rem]"
+    />
+    <div class="flex min-w-0 flex-1 flex-wrap content-start items-baseline gap-x-3 gap-y-0.5">
+      <h2 class="text-base font-semibold sm:text-lg">{{ group().titleZh }}</h2>
+      @if (group().titleEn) {
+        <span class="text-xs text-neutral-500 dark:text-neutral-400">{{ group().titleEn }}</span>
+      }
+      <span class="ml-auto flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
+        @for (item of meta(); track item) {
+          <span>{{ item }}</span>
+        }
+        <span class="rounded-full bg-neutral-100 px-2 py-0.5 tabular-nums dark:bg-neutral-800"
+          >{{ group().sessionCount }} 場</span
+        >
+      </span>
+    </div>
+  </header>
+  <app-timeline-matrix [group]="group()" [axis]="axis()" [nowMin]="nowMin()" />
+</article>

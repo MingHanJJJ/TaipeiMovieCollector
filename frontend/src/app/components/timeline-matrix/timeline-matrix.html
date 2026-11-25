@@ -1,0 +1,73 @@
+<div class="overflow-x-auto" role="table" [attr.aria-label]="group().titleZh + ' 場次時間軸'">
+  <div [style.width.px]="width() + labelWidth">
+    <!-- hour header -->
+    <div
+      class="flex border-b border-black/10 text-[11px] text-neutral-500 dark:border-white/10 dark:text-neutral-400"
+      role="row"
+    >
+      <div
+        class="sticky left-0 z-20 shrink-0 bg-white dark:bg-neutral-900"
+        [style.width.px]="labelWidth"
+      ></div>
+      <div class="relative h-6" [style.width.px]="width()">
+        @for (hour of hours(); track hour.min) {
+          @if (!$last) {
+            <span
+              class="absolute top-1 pl-1 tabular-nums"
+              [class]="hour.nextDay ? 'text-neutral-400 dark:text-neutral-500' : ''"
+              [style.left.px]="hour.left"
+              >{{ hour.label }}</span
+            >
+          }
+        }
+      </div>
+    </div>
+
+    @for (row of rows(); track row.code) {
+      <div class="flex border-b border-black/5 last:border-b-0 dark:border-white/5" role="row">
+        <div
+          class="sticky left-0 z-10 flex shrink-0 items-center bg-white pr-2 pl-1 text-xs font-medium text-neutral-700 dark:bg-neutral-900 dark:text-neutral-200"
+          [style.width.px]="labelWidth"
+          [style.min-height.px]="row.height"
+          role="rowheader"
+        >
+          {{ row.name }}
+        </div>
+        <div class="relative" [style.width.px]="width()" [style.height.px]="row.height">
+          @for (hour of hours(); track hour.min) {
+            <span
+              class="absolute top-0 bottom-0 border-l border-black/5 dark:border-white/5"
+              [style.left.px]="hour.left"
+            ></span>
+          }
+          @if (nowLeft() !== null) {
+            <span
+              class="absolute top-0 bottom-0 z-[5] border-l-2 border-rose-500/70"
+              [style.left.px]="nowLeft()"
+            ></span>
+          }
+          @for (block of row.blocks; track block.id) {
+            <!-- A link without href (null) is shown as plain, unclickable text. -->
+            <a
+              class="absolute flex items-center gap-1 overflow-hidden rounded-md px-1.5 text-[11px] leading-none whitespace-nowrap ring-1 ring-inset focus-visible:outline-2 focus-visible:outline-sky-500 [&[href]]:hover:brightness-95"
+              [class]="block.classes"
+              [attr.href]="block.href"
+              target="_blank"
+              rel="noopener noreferrer"
+              [style.left.px]="block.left"
+              [style.width.px]="block.width"
+              [style.top.px]="block.top"
+              [style.height.px]="block.height"
+              [title]="block.title"
+            >
+              <span class="font-semibold tabular-nums">{{ block.time }}</span>
+              @if (block.tag) {
+                <span class="truncate opacity-80">{{ block.tag }}</span>
+              }
+            </a>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>

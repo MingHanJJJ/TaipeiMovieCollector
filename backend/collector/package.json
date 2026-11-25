@@ -1,0 +1,33 @@
+{
+  "name": "taipei-movie-collector-data",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "db:psql": "docker compose exec postgres sh -c 'psql -U $POSTGRES_USER -d $POSTGRES_DB'",
+    "seed": "tsx scripts/seed/cinemas.mts",
+    "sync:vieshow": "tsx scripts/providers/vieshow/sync.mts",
+    "enrich:tmdb": "tsx scripts/enrich/tmdb.mts"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "dotenv": "^18.0.10",
+    "drizzle-orm": "^0.45.4",
+    "pg": "^8.23.1",
+    "playwright": "^1.65.1",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/pg": "^8.23.1",
+    "drizzle-kit": "^0.31.11",
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vitest": "^5.1.1"
+  }
+}

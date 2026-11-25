@@ -1,0 +1,82 @@
+<main class="mx-auto w-full max-w-6xl flex-1 px-4 pb-16">
+  <header class="py-5">
+    <h1 class="text-xl font-bold tracking-tight sm:text-2xl">台北電影場次比對</h1>
+    <p class="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+      勾選影城,在同一條時間軸上比較場次。點場次可前往威秀訂票頁。
+    </p>
+  </header>
+
+  @if (state().failed) {
+    <p role="alert" class="mb-3 rounded-lg border border-rose-400 p-3 text-sm">
+      無法載入場次,請確認 API 是否啟動,再重新整理。
+    </p>
+  }
+
+  @if (state().data; as data) {
+    <app-filter-bar [data]="data" [loading]="state().loading" />
+
+    <div
+      class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-500 dark:text-neutral-400"
+    >
+      <span
+        >{{ data.groups.length }} 部電影 · {{ data.sessionCount }} 場次 ·
+        {{ data.selected.length }} 間影城</span
+      >
+      <span class="flex flex-wrap items-center gap-2" aria-label="圖例">
+        @for (item of kinds; track item.kind) {
+          <span class="flex items-center gap-1">
+            <span
+              class="inline-block h-3 w-3 rounded-sm ring-1 ring-inset"
+              [class]="kindClass[item.kind]"
+            ></span>
+            {{ item.label }}
+          </span>
+        }
+        @if (data.nowMin !== null) {
+          <span class="flex items-center gap-1">
+            <span class="inline-block h-3 border-l-2 border-rose-500/70"></span>
+            現在
+          </span>
+        }
+      </span>
+    </div>
+
+    <div class="mt-3 flex flex-col gap-3">
+      @if (data.selected.length === 0) {
+        <div
+          class="rounded-xl border border-dashed border-neutral-300 p-10 text-center dark:border-neutral-700"
+        >
+          <p class="font-medium">請至少勾選一間影城</p>
+          <p class="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+            使用上方的影城按鈕,或按「全選」。
+          </p>
+        </div>
+      } @else {
+        @for (group of data.groups; track group.movieId) {
+          <app-movie-card [group]="group" [axis]="data.axis" [nowMin]="data.nowMin" />
+        } @empty {
+          <div
+            class="rounded-xl border border-dashed border-neutral-300 p-10 text-center dark:border-neutral-700"
+          >
+            <p class="font-medium">這一天沒有符合的場次</p>
+            <p class="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+              {{ data.q ? '試試清除片名搜尋,或換一天、多勾幾間影城。' : '換一天,或多勾幾間影城。' }}
+            </p>
+          </div>
+        }
+      }
+    </div>
+
+    <footer class="mt-8 text-xs text-neutral-500 dark:text-neutral-400">
+      場次資料來源:威秀影城官網{{
+        syncedText() ? ',最後同步 ' + syncedText() : ''
+      }}。影城通常每週更新一次場次。海報與電影資料:TMDB(This product uses the TMDB API but is not
+      endorsed or certified by TMDB.)
+    </footer>
+  } @else if (state().loading) {
+    <div class="animate-pulse" aria-busy="true" aria-label="載入中">
+      <div class="h-36 rounded-xl bg-neutral-200 dark:bg-neutral-800"></div>
+      <div class="mt-4 h-60 rounded-xl bg-neutral-200 dark:bg-neutral-800"></div>
+    </div>
+  }
+</main>

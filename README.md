@@ -1,33 +1,74 @@
 # TaipeiMovieCollector
 
-台北電影院場次 + IMDb / 爛番茄評分 + 時間段搜尋(個人自用)。先做威秀 TP,之後加美麗華。
-計畫與進度見 [plan.md](./plan.md)。
+Compare showtimes across Vieshow cinemas in Taipei and New Taipei on one timeline. Personal use.
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for how it works and [plan.md](./plan.md) for the original plan.
 
-## 需求
-- Node 22(nvm)、Docker(含 compose)
-- Playwright Chromium:`npx playwright install chromium`(Linux 需系統函式庫:`sudo npx playwright install-deps chromium`)
-
-## 啟動
-```bash
-cp .env.example .env            # 設定帳密與 TMDB_API_KEY / OMDB_API_KEY
-docker compose up -d            # Postgres 17 (127.0.0.1:5432) + pgAdmin (http://localhost:5050)
-npm install
-npm run db:migrate              # 建立資料表
-npm run seed                    # 寫入影城資料(可重複執行)
-npm run dev                     # http://localhost:3000
+```
+backend/              Python API (FastAPI)
+backend/collector/    Data collection and database schema (TypeScript)
+frontend/             Web page (Angular)
+docker-compose.yml    Database and production services
+.env                  Configuration for everything (not committed)
 ```
 
-## 常用指令
-| 指令 | 說明 |
-|---|---|
-| `npm test` | vitest |
-| `npm run typecheck` / `npm run lint` | 型別檢查 / ESLint |
-| `npm run db:generate` | 依 `src/db/schema.ts` 產生 migration |
-| `npm run db:migrate` | 套用 migration |
-| `npm run sync:vieshow -- --all` | 同步全部威秀影城場次(約 25 分鐘;每週三晚上跑) |
-| `npm run db:psql` | 進入 Postgres 的 psql |
-| `npm run db:studio` | Drizzle Studio |
-| `docker compose down -v` | 停止並**清空**資料庫 |
+## Requirements
+- Node 22.22.3 or newer, Docker with Compose
+- Python 3 with venv (`sudo apt install python3-venv`)
+- Playwright Chromium for the scraper: `npx playwright install chromium`
+  (Linux system libraries: `sudo npx playwright install-deps chromium`)
 
-## 爬蟲守則
-只讀公開頁面、低頻(頁面間隔 2–5 秒隨機)、影城每週更新一次場次所以**每週同步即可**(`npm run sync:vieshow -- --cinema TP`)。遇到封鎖(403/429/`Access Denied`/`/hold/`)直接中止並記錄,不重試、不偽造指紋、不換 IP、不用代理。
+## First-time setup
+```bash
+cp .env.example .env            # set passwords and TMDB_API_KEY
+docker compose up -d postgres pgadmin    # Postgres on 127.0.0.1:5432, pgAdmin on http://localhost:5050
+
+cd backend/collector
+npm install
+npm run db:migrate              # create tables
+npm run seed                    # add cinemas (safe to repeat)
+
+cd ..                           # backend/
+python3 -m venv .venv
+.venv/bin/pip install -r requirements-dev.txt
+
+cd ../frontend
+npm install
+```
+
+## Development
+Use two terminals:
+
+```bash
+cd backend && source .venv/bin/activate && fastapi dev app/main.py   # http://localhost:8000/docs
+```
+```bash
+cd frontend && npm start                                             # http://localhost:4200
+```
+
+| Task | Folder | Command |
+|---|---|---|
+| API tests | `backend/` | `.venv/bin/python -m pytest` |
+| Frontend build | `frontend/` | `npm run build` |
+| Collector tests / type check | `backend/collector/` | `npm test` / `npm run typecheck` |
+| Sync all showtimes (about 25 minutes) | `backend/collector/` | `npm run sync:vieshow -- --all` |
+| Add posters and TMDB ids | `backend/collector/` | `npm run enrich:tmdb` |
+| New / apply database migration | `backend/collector/` | `npm run db:generate` / `npm run db:migrate` |
+| Database shell | `backend/collector/` | `npm run db:psql` |
+| Delete the database | project root | `docker compose down -v` |
+
+## Scraping rules
+Read public pages only, slowly (random 2–5 s between pages). Cinemas publish showtimes weekly, so sync weekly.
+If blocked (403, 429, `Access Denied`, `/hold/`), stop and record it: no retries, no fingerprint spoofing, no IP rotation, no proxies.
+
+## Self-hosting (production)
+
+```bash
+docker compose up -d --build web     # starts postgres, api and web; site on http://127.0.0.1:3000 (WEB_PORT)
+```
+
+- The scraper is **not** containerised: it needs a residential IP and local Chromium. Run it on the host.
+- Weekly refresh (Vieshow publishes on Wednesday): `crontab -e` and add
+  `0 22 * * 3 /path/to/TaipeiMovieCollector/backend/collector/scripts/ops/weekly-sync.sh`
+  (logs in `backend/collector/.state/`). The machine and Docker must be running at that time.
+- Public access without opening router ports: create a Cloudflare Tunnel (Zero Trust → Networks → Tunnels), point its public hostname at `http://web:3000`, put the token in `.env` as `CLOUDFLARE_TUNNEL_TOKEN`, then `docker compose --profile tunnel up -d`.
+- The site has no authentication and is read-only. Postgres and pgAdmin stay bound to 127.0.0.1; never expose them.

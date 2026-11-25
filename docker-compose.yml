@@ -36,6 +36,42 @@ services:
       - pgadmin_data:/var/lib/pgadmin
       - ./docker/pgadmin-servers.json:/pgadmin4/servers.json:ro
 
+  # Python API. Only reachable from the other containers.
+  api:
+    build: ./backend
+    container_name: tmc-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-tmc}:${POSTGRES_PASSWORD:-tmc_dev_password}@postgres:5432/${POSTGRES_DB:-taipei_movies}
+      TZ: Asia/Taipei
+
+  # Angular app served by nginx, which also forwards /api to the API.
+  # `docker compose up -d --build web`
+  web:
+    build: ./frontend
+    container_name: tmc-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
+
+  # Optional public access via Cloudflare Tunnel (needs CLOUDFLARE_TUNNEL_TOKEN in .env).
+  #   docker compose --profile tunnel up -d
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: tmc-cloudflared
+    restart: unless-stopped
+    profiles: ["tunnel"]
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - web
+
 volumes:
   pgdata:
   pgadmin_data:
